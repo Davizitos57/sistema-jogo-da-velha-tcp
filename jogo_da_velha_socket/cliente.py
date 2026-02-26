@@ -15,7 +15,9 @@ board_buttons = []
 # ================= DESCOBERTA AUTOMÁTICA (NOVO) =================
 
 def discover_server_ip():
-    """Escuta o sinal de broadcast do servidor para obter o IP automaticamente."""
+    """Escuta o sinal de broadcast do servidor para obter o IP automaticamente.
+    A mensagem pode vir no formato "TIC_TAC_TOE_SERVER_HERE <ip>" ou apenas a tag.
+    """
     print("A procurar servidor na rede local...")
     discovery_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
@@ -26,10 +28,16 @@ def discover_server_ip():
     while True:
         try:
             data, addr = discovery_socket.recvfrom(1024)
-            if data.decode() == "TIC_TAC_TOE_SERVER_HERE":
-                print(f"Servidor encontrado no IP: {addr[0]}")
+            text = data.decode()
+            if text.startswith("TIC_TAC_TOE_SERVER_HERE"):
+                parts = text.split()
+                if len(parts) >= 2:
+                    ip = parts[1]
+                else:
+                    ip = addr[0]
+                print(f"Servidor encontrado no IP: {ip}")
                 discovery_socket.close()
-                return addr[0]
+                return ip
         except Exception as e:
             print(f"Erro na descoberta: {e}")
 
@@ -229,12 +237,8 @@ def receive():
                 status_label.config(text="Aguardando jogada do oponente")
 
             elif parts[0] in ["VICTORY", "DEFEAT", "DRAW", "TIMEOUT"]:
-<<<<<<< HEAD
-                disable_board()
-=======
                 reset_board()   
                 disable_board() 
->>>>>>> main
                 symbol_label.config(text="Símbolo: -")
                 opponent_label.config(text="Oponente: -")
                 status_label.config(text="Partida finalizada")

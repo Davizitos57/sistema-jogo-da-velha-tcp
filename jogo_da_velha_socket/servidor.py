@@ -16,11 +16,27 @@ timers = {}
 
 # ================= DISCOBERTA AUTOMÁTICA (NOVO) =================
 
+def get_local_ip():
+    """Retorna o IP local usado para sair na rede (não 127.0.0.1)."""
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        # O destino escolhido não precisa estar disponível, apenas permite descobrir
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    except Exception:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
 def broadcast_server_discovery():
-    """Envia um sinal UDP para a rede para que os clientes encontrem o servidor."""
+    """Envia um sinal UDP para a rede para que os clientes encontrem o servidor.
+    A mensagem contém também o IP real da interface para que o cliente saiba onde se conectar.
+    """
     discovery_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     discovery_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    message = "TIC_TAC_TOE_SERVER_HERE".encode()
+    ip = get_local_ip()
+    message = f"TIC_TAC_TOE_SERVER_HERE {ip}".encode()
     
     while True:
         try:
@@ -196,7 +212,8 @@ server.listen()
 # Inicia a thread de anúncio do servidor na rede local
 threading.Thread(target=broadcast_server_discovery, daemon=True).start()
 
-print(f"Servidor iniciado em {HOST}:{PORT}...")
+local_ip = get_local_ip()
+print(f"Servidor iniciado em {HOST}:{PORT} (interface {local_ip})...")
 print("Anunciando presença na rede local (Porta UDP 5001)...")
 
 while True:
