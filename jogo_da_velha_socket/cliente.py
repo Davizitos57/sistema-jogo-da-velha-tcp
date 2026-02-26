@@ -67,6 +67,15 @@ users_listbox = tk.Listbox(side_frame,
                            relief="flat")
 users_listbox.pack(padx=20, pady=10, fill="both")
 
+def prevent_self_selection(event):
+    selection = users_listbox.curselection()
+    if selection:
+        # Se o item clicado for o próprio nickname, remove a seleção
+        if users_listbox.get(selection[0]) == nickname:
+            users_listbox.selection_clear(selection[0])
+
+users_listbox.bind("<<ListboxSelect>>", prevent_self_selection)
+
 def challenge():
     selection = users_listbox.curselection()
     if selection:
@@ -190,8 +199,8 @@ def receive():
                 status_label.config(text="Aguardando jogada do oponente")
 
             elif parts[0] in ["VICTORY", "DEFEAT", "DRAW", "TIMEOUT"]:
-                disable_board()
-                reset_board()
+                reset_board()   
+                disable_board() 
                 symbol_label.config(text="Símbolo: -")
                 opponent_label.config(text="Oponente: -")
                 status_label.config(text="Partida finalizada")
