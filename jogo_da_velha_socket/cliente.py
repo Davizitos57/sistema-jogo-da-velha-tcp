@@ -143,6 +143,7 @@ for i in range(9):
                     bg="#3a3a3a",
                     fg="white",
                     relief="flat",
+                    state="disabled",
                     command=lambda i=i: send_move(i))
     btn.grid(row=i//3, column=i%3, padx=8, pady=8)
     board_buttons.append(btn)
