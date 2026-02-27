@@ -14,10 +14,7 @@ symbols = {}
 turns = {}
 timers = {}
 
-# ================= DISCOBERTA AUTOMÁTICA (NOVO) =================
-
 def get_local_ip():
-    """Retorna o IP local usado para sair na rede (não 127.0.0.1)."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         # O destino escolhido não precisa estar disponível, apenas permite descobrir
@@ -30,9 +27,6 @@ def get_local_ip():
 
 
 def broadcast_server_discovery():
-    """Envia um sinal UDP para a rede para que os clientes encontrem o servidor.
-    A mensagem contém também o IP real da interface para que o cliente saiba onde se conectar.
-    """
     discovery_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     discovery_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     ip = get_local_ip()
@@ -46,8 +40,6 @@ def broadcast_server_discovery():
         except Exception as e:
             print(f"Erro no broadcast de descoberta: {e}")
 
-# ================= UTIL =================
-
 def send(conn, msg):
     conn.send((msg + "\n").encode())
 
@@ -55,8 +47,6 @@ def broadcast_users():
     users = ",".join(clients.keys())
     for conn in clients.values():
         send(conn, f"USER_LIST {users}")
-
-# ================= LÓGICA =================
 
 def check_winner(board):
     wins = [(0,1,2),(3,4,5),(6,7,8),
@@ -209,7 +199,6 @@ server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((HOST, PORT))
 server.listen()
 
-# Inicia a thread de anúncio do servidor na rede local
 threading.Thread(target=broadcast_server_discovery, daemon=True).start()
 
 local_ip = get_local_ip()

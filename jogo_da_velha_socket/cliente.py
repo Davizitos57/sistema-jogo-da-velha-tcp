@@ -12,12 +12,7 @@ my_symbol = "-"
 current_opponent = "-"
 board_buttons = []
 
-# ================= DESCOBERTA AUTOMÁTICA (NOVO) =================
-
 def discover_server_ip():
-    """Escuta o sinal de broadcast do servidor para obter o IP automaticamente.
-    A mensagem pode vir no formato "TIC_TAC_TOE_SERVER_HERE <ip>" ou apenas a tag.
-    """
     print("A procurar servidor na rede local...")
     discovery_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
@@ -44,8 +39,6 @@ def discover_server_ip():
 # Obtém o HOST dinamicamente antes de prosseguir
 HOST = discover_server_ip()
 
-# ================= SOCKET =================
-
 context = ssl.create_default_context()
 context.check_hostname = False
 context.verify_mode = ssl.CERT_NONE
@@ -56,8 +49,6 @@ client.connect((HOST, PORT))
 
 def send(msg):
     client.send((msg + "\n").encode())
-
-# ================= LOGIN =================
 
 while True:
     nickname = simpledialog.askstring("Login", "Digite seu nickname:")
@@ -104,7 +95,6 @@ users_listbox.pack(padx=20, pady=10, fill="both")
 def prevent_self_selection(event):
     selection = users_listbox.curselection()
     if selection:
-        # Se o item clicado for o próprio nickname, remove a seleção
         if users_listbox.get(selection[0]) == nickname:
             users_listbox.selection_clear(selection[0])
 
