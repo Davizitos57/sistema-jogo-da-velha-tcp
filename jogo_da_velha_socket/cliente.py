@@ -2,7 +2,6 @@ import socket
 import ssl
 import threading
 import tkinter as tk
-from tkinter import messagebox, simpledialog
 
 PORT = 5000
 DISCOVERY_PORT = 5001
@@ -15,29 +14,22 @@ board_buttons = []
 def discover_server_ip():
     print("A procurar servidor na rede local...")
     discovery_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    
-    # Permite que várias instâncias escutem a mesma porta se necessário
     discovery_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     discovery_socket.bind(('', DISCOVERY_PORT))
-    
-    while True:
-        try:
-            data, addr = discovery_socket.recvfrom(1024)
-            text = data.decode()
-            if text.startswith("TIC_TAC_TOE_SERVER_HERE"):
-                parts = text.split()
-                if len(parts) >= 2:
-                    ip = parts[1]
-                else:
-                    ip = addr[0]
-                print(f"Servidor encontrado no IP: {ip}")
-                discovery_socket.close()
-                return ip
-        except Exception as e:
-            print(f"Erro na descoberta: {e}")
 
-# Obtém o HOST dinamicamente antes de prosseguir
+    while True:
+        data, addr = discovery_socket.recvfrom(1024)
+        text = data.decode()
+        if text.startswith("TIC_TAC_TOE_SERVER_HERE"):
+            parts = text.split()
+            ip = parts[1] if len(parts) >= 2 else addr[0]
+            discovery_socket.close()
+            print(f"Servidor encontrado no IP: {ip}")
+            return ip
+
 HOST = discover_server_ip()
+
+# ================= SSL =================
 
 context = ssl.create_default_context()
 context.check_hostname = False
@@ -50,18 +42,105 @@ client.connect((HOST, PORT))
 def send(msg):
     client.send((msg + "\n").encode())
 
+# ================= MODAIS MODERNOS =================
+
+def criar_modal(titulo, mensagem, tipo="info", botoes=("OK",)):
+    modal = tk.Toplevel(root)
+    modal.title(titulo)
+    modal.geometry("350x200")
+    modal.configure(bg="#1e1e1e")
+    modal.resizable(False, False)
+    modal.grab_set()
+
+    frame = tk.Frame(modal, bg="#1e1e1e")
+    frame.pack(expand=True)
+
+    tk.Label(frame, text=mensagem,
+             font=("Segoe UI", 12),
+             bg="#1e1e1e",
+             fg="white").pack(pady=5)
+
+    resposta = {"valor": None}
+
+    def clicar(valor):
+        resposta["valor"] = valor
+        modal.destroy()
+
+    btn_frame = tk.Frame(frame, bg="#1e1e1e")
+    btn_frame.pack(pady=15)
+
+    for b in botoes:
+        tk.Button(btn_frame,
+                  text=b,
+                  width=10,
+                  bg="#4CAF50" if b in ("OK", "Sim") else "#444",
+                  fg="white",
+                  relief="flat",
+                  command=lambda v=b: clicar(v)
+                  ).pack(side="left", padx=10)
+
+    root.wait_window(modal)
+    return resposta["valor"]
+
+def modal_login():
+    modal = tk.Toplevel()
+    modal.title("Login")
+    modal.geometry("350x200")
+    modal.configure(bg="#1e1e1e")
+    modal.resizable(False, False)
+    modal.grab_set()
+
+    tk.Label(modal,
+             text="Digite seu nickname",
+             font=("Segoe UI", 12),
+             bg="#1e1e1e",
+             fg="white").pack(pady=20)
+
+    entry = tk.Entry(modal,
+                     font=("Segoe UI", 12),
+                     bg="#2b2b2b",
+                     fg="white",
+                     insertbackground="white",
+                     relief="flat")
+    entry.pack(pady=5)
+
+    resultado = {"valor": None}
+
+    def confirmar():
+        resultado["valor"] = entry.get()
+        modal.destroy()
+
+    tk.Button(modal,
+              text="Entrar",
+              bg="#4CAF50",
+              fg="white",
+              relief="flat",
+              command=confirmar).pack(pady=15)
+
+    modal.wait_window()
+    return resultado["valor"]
+
 while True:
-    nickname = simpledialog.askstring("Login", "Digite seu nickname:")
+    root = tk.Tk()
+    root.withdraw()  # esconde temporariamente
+    nickname = modal_login()
+    root.destroy()
+
     if not nickname:
         exit()
+
     send(f"REGISTER {nickname}")
     response = client.recv(1024).decode().strip()
+
     if response == "OK":
         break
     else:
-        messagebox.showerror("Erro", "Nickname já está em uso")
+        root = tk.Tk()
+        root.withdraw()
+        criar_modal("Erro", "Nickname já está em uso", "erro")
+        root.destroy()
 
-# ================= GUI =================
+# ================= GUI PRINCIPAL =================
 
 root = tk.Tk()
 root.title("Jogo da Velha Online")
@@ -92,14 +171,6 @@ users_listbox = tk.Listbox(side_frame,
                            relief="flat")
 users_listbox.pack(padx=20, pady=10, fill="both")
 
-def prevent_self_selection(event):
-    selection = users_listbox.curselection()
-    if selection:
-        if users_listbox.get(selection[0]) == nickname:
-            users_listbox.selection_clear(selection[0])
-
-users_listbox.bind("<<ListboxSelect>>", prevent_self_selection)
-
 def challenge():
     selection = users_listbox.curselection()
     if selection:
@@ -107,13 +178,12 @@ def challenge():
         if opponent != nickname:
             send(f"INVITE {opponent}")
 
-challenge_btn = tk.Button(side_frame,
-                          text="Desafiar",
-                          bg="#4CAF50",
-                          fg="white",
-                          relief="flat",
-                          command=challenge)
-challenge_btn.pack(pady=10)
+tk.Button(side_frame,
+          text="Desafiar",
+          bg="#4CAF50",
+          fg="white",
+          relief="flat",
+          command=challenge).pack(pady=10)
 
 # ===== Área do jogo =====
 
@@ -191,7 +261,7 @@ def receive():
             msg = client.recv(1024).decode().strip()
             if not msg:
                 break
-            
+
             parts = msg.split()
 
             if parts[0] == "USER_LIST":
@@ -201,8 +271,11 @@ def receive():
                         users_listbox.insert(tk.END, u)
 
             elif parts[0] == "INVITE_FROM":
-                if messagebox.askyesno("Convite",
-                                       f"{parts[1]} quer jogar. Aceitar?"):
+                resposta = criar_modal("Convite",
+                                       f"{parts[1]} quer jogar. Aceitar?",
+                                       "pergunta",
+                                       botoes=("Sim", "Não"))
+                if resposta == "Sim":
                     current_opponent = parts[1]
                     send(f"ACCEPT {parts[1]}")
 
@@ -227,13 +300,12 @@ def receive():
                 status_label.config(text="Aguardando jogada do oponente")
 
             elif parts[0] in ["VICTORY", "DEFEAT", "DRAW", "TIMEOUT"]:
-                reset_board()   
-                disable_board() 
+                reset_board()
+                disable_board()
                 symbol_label.config(text="Símbolo: -")
                 opponent_label.config(text="Oponente: -")
                 status_label.config(text="Partida finalizada")
-                messagebox.showinfo("Resultado", parts[0])
-                reset_board()
+                criar_modal("Resultado", parts[0], "sucesso")
 
         except:
             break
